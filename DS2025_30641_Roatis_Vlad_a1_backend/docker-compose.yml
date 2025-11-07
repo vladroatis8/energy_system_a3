@@ -1,0 +1,121 @@
+version: '3.8'
+
+services:
+  
+  traefik:
+    image: traefik:v2.9
+    container_name: traefik
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "80:80"       
+      - "8080:8080"  
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - app-network
+
+  # bd pt useri
+  user-postgres-db:
+    image: postgres:13
+    container_name: user_postgres_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: user_db
+    volumes:
+      - user-db-data:/var/lib/postgresql/data
+    networks:
+      - app-network 
+
+  
+  user-service:
+    build: ./user-service 
+    depends_on:
+      - user-postgres-db 
+      - auth-service
+
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://user-postgres-db:5432/user_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 1234
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.user-service.rule=PathPrefix(`/users`)"
+      - "traefik.http.services.user-service.loadbalancer.server.port=8080"
+    networks:
+      - app-network
+
+  # db pt device uri
+  device-postgres-db:
+    image: postgres:13
+    container_name: device_postgres_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: device_db
+    volumes:
+      - device-db-data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+ 
+  device-service:
+    build: ./device-service
+    depends_on:
+      - device-postgres-db
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://device-postgres-db:5432/device_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 1234 
+      SERVER_PORT: 8080 
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.device-service.rule=PathPrefix(`/devices`)"
+      - "traefik.http.services.device-service.loadbalancer.server.port=8080"
+    networks:
+      - app-network
+
+  auth-postgres-db:
+    image: postgres:13
+    container_name: auth_postgres_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: auth_db 
+    volumes:
+      - auth-db-data:/var/lib/postgresql/data # Folosim un volum nou
+    networks:
+      - app-network
+
+  # ### NOU ### 7. Serviciul de Autentificare
+  auth-service:
+    build: ./auth-service # Îi spunem să construiască din folderul auth-service
+    depends_on:
+      - auth-postgres-db # Depinde de noua bază de date
+    environment:
+      # Suprascriem conexiunea la DB să folosească containerul auth-postgres-db
+      SPRING_DATASOURCE_URL: jdbc:postgresql://auth-postgres-db:5432/auth_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 1234
+      # Injectăm cheia secretă JWT în container
+      JWT_SECRET: ${JWT_SECRET} # Vom defini asta într-un fișier .env
+    labels:
+      # Îi spunem lui Traefik să-l expună
+      - "traefik.enable=true"
+      # Orice cerere care începe cu /auth va fi trimisă aici
+      - "traefik.http.routers.auth-service.rule=PathPrefix(`/auth`)"
+      - "traefik.http.services.auth-service.loadbalancer.server.port=8080"
+    networks:
+      - app-network
+networks:
+  app-network:  # ← DEFINEȘTE NETWORK-UL
+    driver: bridge
+
+volumes:
+  user-db-data:
+  device-db-data:
+  auth-db-data:

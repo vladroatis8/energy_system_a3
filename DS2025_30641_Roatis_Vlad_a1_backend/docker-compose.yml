@@ -19,7 +19,7 @@ services:
       - auth-service
       - user-service
       - device-service
-      - frontend          # ✅ adăugăm frontend-ul aici
+      - frontend         
     labels:
       - "traefik.enable=true"
 
@@ -32,7 +32,7 @@ services:
       - "traefik.http.routers.auth.rule=PathPrefix(`/auth`)"
       - "traefik.http.services.auth.loadbalancer.server.port=8080"
       - "traefik.http.routers.auth.entrypoints=web"
-
+      - "traefik.http.routers.auth-swagger.rule=PathPrefix(`/auth/swagger-ui`, `/auth/v3/api-docs`)"
       # 🔹 User service
       - "traefik.http.routers.user.rule=PathPrefix(`/users`)"
       - "traefik.http.services.user.loadbalancer.server.port=8080"
@@ -42,6 +42,7 @@ services:
       - "traefik.http.routers.device.rule=PathPrefix(`/devices`)"
       - "traefik.http.services.device.loadbalancer.server.port=8080"
       - "traefik.http.routers.device.entrypoints=web"
+
     networks:
       - app-network
 
@@ -103,9 +104,8 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.device-service.rule=PathPrefix(`/devices`)"
       - "traefik.http.services.device-service.loadbalancer.server.port=8080"
-      - "traefik.http.routers.devices-swagger.rule=PathPrefix(`/devices/swagger-ui`, `/devices/v3/api-docs`)"
-      - "traefik.http.routers.devices-swagger.service=devices"
-      
+    ports:
+      - "8082:8082"
     networks:
       - app-network
 
@@ -117,26 +117,21 @@ services:
       POSTGRES_PASSWORD: 1234
       POSTGRES_DB: auth_db 
     volumes:
-      - auth-db-data:/var/lib/postgresql/data # Folosim un volum nou
+      - auth-db-data:/var/lib/postgresql/data 
     networks:
       - app-network
 
-  # ### NOU ### 7. Serviciul de Autentificare
   auth-service:
-    build: ./auth-service # Îi spunem să construiască din folderul auth-service
+    build: ./auth-service 
     depends_on:
-      - auth-postgres-db # Depinde de noua bază de date
+      - auth-postgres-db 
     environment:
-      # Suprascriem conexiunea la DB să folosească containerul auth-postgres-db
       SPRING_DATASOURCE_URL: jdbc:postgresql://auth-postgres-db:5432/auth_db
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: 1234
-      # Injectăm cheia secretă JWT în container
-      JWT_SECRET: ${JWT_SECRET} # Vom defini asta într-un fișier .env
+      JWT_SECRET: ${JWT_SECRET} 
     labels:
-      # Îi spunem lui Traefik să-l expună
       - "traefik.enable=true"
-      # Orice cerere care începe cu /auth va fi trimisă aici
       - "traefik.http.routers.auth-service.rule=PathPrefix(`/auth`)"
       - "traefik.http.services.auth-service.loadbalancer.server.port=8080"
     networks:
@@ -153,7 +148,7 @@ services:
       - app-network
 
 networks:
-  app-network:  # ← DEFINEȘTE NETWORK-UL
+  app-network:  
     driver: bridge
 
 volumes:

@@ -1,4 +1,4 @@
-package ro.utcluj.ds.auth_service.dto;
+package ro.utcluj.ds.user_service.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -10,5 +10,5 @@ import lombok.NoArgsConstructor;
 public class AuthResponse {
     private String token;
     private String role;
-    private String id; // 
+    private String id;
 }

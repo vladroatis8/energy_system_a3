@@ -27,8 +27,6 @@ function ClientDevices() {
     console.log("Dashboard authData:", authData);
     return (
         <div>
-            <h3>Dispozitivele mele</h3>
-
             {error && <p style={{ color: 'red' }}>{error}</p>}
 
             {devices.length === 0 ? (

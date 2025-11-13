@@ -1,5 +1,7 @@
 package ro.utcluj.ds.auth_service.controller;
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +14,8 @@ import org.springframework.web.bind.annotation.RestController;
 import ro.utcluj.ds.auth_service.dto.AuthRequest;
 import ro.utcluj.ds.auth_service.dto.AuthResponse;
 import ro.utcluj.ds.auth_service.dto.RegisterRequest;
+import ro.utcluj.ds.auth_service.entities.AuthUser;
+import ro.utcluj.ds.auth_service.repositories.AuthUserRepository;
 import ro.utcluj.ds.auth_service.service.AuthService;
 
 @RestController
@@ -22,23 +26,25 @@ public class AuthController {
 
     @Autowired
     private AuthService authService;
+    @Autowired
+    private AuthUserRepository authUserRepository;
+
 
     /**
      * Endpoint pentru înregistrarea unui utilizator nou.
      * http://localhost:8083/auth/register
      */
-    @PostMapping("/register")
-    public ResponseEntity<?> registerUser(@RequestBody RegisterRequest request) {
-        boolean isRegistered = authService.register(request);
+   @PostMapping("/register")
+public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
+    AuthResponse response = authService.register(request);
 
-        if (isRegistered) {
-            // Utilizatorul a fost creat cu succes
-            return new ResponseEntity<>("User registered successfully!", HttpStatus.CREATED); // 201 Created
-        } else {
-            // Service-ul a returnat false (username-ul există deja)
-            return new ResponseEntity<>("Username is already taken!", HttpStatus.BAD_REQUEST); // 400 Bad Request
-        }
+    if (response == null) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body("User already exists!");
     }
+
+    // ✅ Returnăm tot obiectul AuthResponse (nu doar text)
+    return ResponseEntity.status(HttpStatus.CREATED).body(response);
+}
 
     /**
      * Endpoint pentru autentificarea unui utilizator.
@@ -61,5 +67,11 @@ public class AuthController {
         System.out.println("✅ === AUTH-CONTROLLER: Primită cerere PING! ===");
     return ResponseEntity.ok("Auth-service este online ✅");
     }
+
+    @GetMapping("/users")
+public List<AuthUser> getAllUsers() {
+    return authUserRepository.findAll();
+}
+    
 
 }

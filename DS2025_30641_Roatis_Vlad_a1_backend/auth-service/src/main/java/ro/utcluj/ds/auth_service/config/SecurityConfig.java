@@ -18,16 +18,19 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    @Bean
+ @Bean
 public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
     http
         .csrf(csrf -> csrf.disable())
-        .httpBasic(httpBasic -> httpBasic.disable())
-        .formLogin(form -> form.disable())
+        .cors(cors -> {}) // ✅ activează configurația CORS de mai jos
         .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/auth/**").permitAll()
-            .requestMatchers("/actuator/**").permitAll()   // ✅ adaugă asta
-            .anyRequest().authenticated()
+            .requestMatchers(
+                "/auth/login",
+                "/auth/register",
+                "/auth/ping",
+                "/auth/users"
+            ).permitAll()
+            .anyRequest().permitAll() // 👈 temporar, ca să testăm
         )
         .sessionManagement(session -> session
             .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
@@ -35,5 +38,16 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
 
     return http.build();
 }
+    @Bean
+public org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource() {
+    var corsConfig = new org.springframework.web.cors.CorsConfiguration();
+    corsConfig.addAllowedOriginPattern("*"); // ✅ permite toate originile (inclusiv :3000)
+    corsConfig.addAllowedMethod("*");        // GET, POST, PUT, DELETE etc.
+    corsConfig.addAllowedHeader("*");        // toate headerele
+    corsConfig.setAllowCredentials(true);    // pentru tokenuri / cookie-uri
 
+    var source = new org.springframework.web.cors.UrlBasedCorsConfigurationSource();
+    source.registerCorsConfiguration("/**", corsConfig);
+    return source;
+}
 }

@@ -15,7 +15,7 @@ import lombok.Setter;
 public class UserEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    //@GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(nullable = false, unique = true)
@@ -26,4 +26,6 @@ public class UserEntity {
 
     
     private String role;
+    @Column(name = "auth_id", unique = true)
+private String authId;
 }

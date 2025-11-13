@@ -1,49 +1,66 @@
 import React from 'react';
 import { getAuthData } from '../api';
 import UserManagement from './UserManagement';
-import DeviceManagement from './DeviceManagement'; // ✅ import corect
+import DeviceManagement from './DeviceManagement';
 import ClientDevices from './ClientDevices';
+
 function Dashboard() {
-    const authData = getAuthData(); // Obținem datele din token
+  const authData = getAuthData(); // Obținem datele din token
+  const authId = localStorage.getItem('authId'); // ✅ Preluăm ID-ul din localStorage
 
-    const handleLogout = () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('role');
-        window.location.reload();
-    };
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('role');
+    localStorage.removeItem('authId'); // ✅ Ștergem și ID-ul la logout
+    window.location.reload();
+  };
 
-    // Dacă token-ul e invalid -> delogare automată
-    if (!authData) {
-        handleLogout();
-        return <p>Sesiune invalidă. Se încarcă...</p>;
-    }
+  // Dacă token-ul e invalid -> delogare automată
+  if (!authData) {
+    handleLogout();
+    return <p>Sesiune invalidă. Se încarcă...</p>;
+  }
 
-    return (
-        <div style={{ padding: '20px' }}>
-            <h2>Dashboard</h2>
-            <p>
-                Rolul tău este: <strong>{authData.role}</strong>
-            </p>
-            <button onClick={handleLogout}>Logout</button>
-            <hr />
+  return (
+    <div style={{ padding: '20px', textAlign: 'center' }}>
+      <h2>Dashboard</h2>
+      <p>
+        Rolul tău este: <strong>{authData.role}</strong><br />
+        ID-ul tău de autentificare: <strong>{authData.userId}</strong>
+      </p>
+      <button
+        onClick={handleLogout}
+        style={{
+          padding: '6px 12px',
+          marginBottom: '20px',
+          cursor: 'pointer',
+          backgroundColor: '#f5f5f5',
+          border: '1px solid #ccc',
+          borderRadius: '4px',
+        }}
+      >
+        Logout
+      </button>
+      <hr />
 
-            {/* 🔹 ADMINISTRATOR: poate gestiona useri și device-uri */}
-            {authData.role === 'ADMINISTRATOR' && (
-                <div>
-                    <h3>Panou Administrator</h3>
-                    <UserManagement />
-                    <DeviceManagement /> {/* ✅ afișăm și device-urile */}
-                </div>
-            )}
-
-            {/* 🔹 CLIENT: vede doar device-urile proprii */}
-            {authData.role === 'CLIENT' && (
-                <div>
-                    <ClientDevices />  {/* ✅ aici se afișează tabelul */}
-                </div>
-            )}
+      {/* 🔹 ADMINISTRATOR: poate gestiona useri și device-uri */}
+      {authData.role === 'ADMINISTRATOR' && (
+        <div>
+          <h3>Panou Administrator</h3>
+          <UserManagement />
+          <DeviceManagement />
         </div>
-    );
+      )}
+
+      {/* 🔹 CLIENT: vede doar device-urile proprii */}
+      {authData.role === 'CLIENT' && (
+        <div>
+          <h3>Dispozitivele mele</h3>
+          <ClientDevices />
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default Dashboard;

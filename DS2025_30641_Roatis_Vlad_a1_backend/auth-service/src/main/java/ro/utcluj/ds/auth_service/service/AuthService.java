@@ -31,28 +31,33 @@ public class AuthService {
      * Înregistrează un utilizator nou.
      * Criptează parola înainte de salvare.
      */
-    public boolean register(RegisterRequest request) {
-        System.out.println("📥 Register request primit pentru username=" + request.getUsername());
+    public AuthResponse register(RegisterRequest request) {
+    System.out.println("📥 Register request primit pentru username=" + request.getUsername());
+
+    // Verificăm dacă user-ul există deja
     if (authUserRepository.findByUsername(request.getUsername()).isPresent()) {
         System.out.println("⚠️ User deja există: " + request.getUsername());
-        return false;
+        return null; // sau poți arunca o excepție custom, dar deocamdată e ok
     }
 
-        // Creăm un utilizator nou
-        AuthUser newUser = new AuthUser();
-        newUser.setUsername(request.getUsername());
-        
-        // --- PARTEA DE SECURITATE ---
-        // CRIPTĂM parola înainte de a o salva! Nu salvăm niciodată parole în clar.
-        newUser.setPassword(passwordEncoder.encode(request.getPassword()));
-        
-        // Setăm rolul (ex: "CLIENT" sau "ADMINISTRATOR")
-        newUser.setRole(request.getRole());
+    // Creăm un utilizator nou
+    AuthUser newUser = new AuthUser();
+    newUser.setUsername(request.getUsername());
+    newUser.setPassword(passwordEncoder.encode(request.getPassword()));
+    newUser.setRole(request.getRole());
 
-        // Salvăm în baza de date
-        authUserRepository.save(newUser);
-        return true; // Succes
-    }
+    // Salvăm în baza de date
+    AuthUser savedUser = authUserRepository.save(newUser);
+
+    // ✅ Generăm token și returnăm ID-ul
+    String token = jwtService.generateToken(savedUser);
+
+    return new AuthResponse(
+            token,
+            savedUser.getRole(),
+            savedUser.getId().toString() // trimitem ID-ul generat în auth-db
+    );
+}
 
     /**
      * Autentifică un utilizator și returnează un token JWT.
@@ -77,7 +82,7 @@ public class AuthService {
             String token = jwtService.generateToken(authUser);
             
             // 4. Returnăm token-ul și rolul (folosind DTO-ul AuthResponse)
-            return new AuthResponse(token, authUser.getRole());
+            return new AuthResponse(token, authUser.getRole(), authUser.getId().toString());
             
         } else {
             // 5. Parola este greșită

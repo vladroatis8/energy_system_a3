@@ -3,7 +3,7 @@ version: '3.8'
 services:
   
   traefik:
-    image: traefik:v2.9
+    image: traefik:v2.10
     container_name: traefik
     command:
       - "--api.insecure=true"
@@ -11,10 +11,37 @@ services:
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
     ports:
-      - "80:80"       
-      - "8080:8080"  
+      - "80:80"
+      - "8080:8080"   # Dashboard
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - auth-service
+      - user-service
+      - device-service
+      - frontend          # ✅ adăugăm frontend-ul aici
+    labels:
+      - "traefik.enable=true"
+
+      # 🔹 Frontend
+      - "traefik.http.routers.frontend.rule=PathPrefix(`/`)"
+      - "traefik.http.services.frontend.loadbalancer.server.port=3000"
+      - "traefik.http.routers.frontend.entrypoints=web"
+
+      # 🔹 Auth service
+      - "traefik.http.routers.auth.rule=PathPrefix(`/auth`)"
+      - "traefik.http.services.auth.loadbalancer.server.port=8080"
+      - "traefik.http.routers.auth.entrypoints=web"
+
+      # 🔹 User service
+      - "traefik.http.routers.user.rule=PathPrefix(`/users`)"
+      - "traefik.http.services.user.loadbalancer.server.port=8080"
+      - "traefik.http.routers.user.entrypoints=web"
+
+      # 🔹 Device service
+      - "traefik.http.routers.device.rule=PathPrefix(`/devices`)"
+      - "traefik.http.services.device.loadbalancer.server.port=8080"
+      - "traefik.http.routers.device.entrypoints=web"
     networks:
       - app-network
 
@@ -111,6 +138,17 @@ services:
       - "traefik.http.services.auth-service.loadbalancer.server.port=8080"
     networks:
       - app-network
+
+  frontend:
+    build: ../DS2025_30641_Roatis_Vlad_a1_frontend/frontend
+    container_name: frontend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=PathPrefix(`/`)"
+      - "traefik.http.services.frontend.loadbalancer.server.port=80"
+    networks:
+      - app-network
+
 networks:
   app-network:  # ← DEFINEȘTE NETWORK-UL
     driver: bridge

@@ -16,20 +16,18 @@ function LoginPage({ onLoginSuccess }) {
                 password: password
             });
 
-            // Extragem datele din răspunsul backendului
-            const { token, role, id } = response.data; // ✅ 'id' e ID-ul din Auth DB
+            const { token, role, id } = response.data;
 
-            // Salvăm totul în localStorage
             localStorage.setItem('token', token);
             localStorage.setItem('role', role);
-            localStorage.setItem('authId', id); // ✅ adăugat acum
+            localStorage.setItem('authId', id); 
 
-            // Semnalăm părintelui că loginul a reușit
+            
             onLoginSuccess(); 
 
         } catch (err) {
             console.error('Eroare la login:', err);
-            setError('Nume de utilizator sau parolă incorectă.');
+            setError('Nume de utilizator sau parola incorecta.');
         }
     };
 

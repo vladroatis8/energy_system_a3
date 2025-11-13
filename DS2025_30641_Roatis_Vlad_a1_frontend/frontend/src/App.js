@@ -1,4 +1,3 @@
-// În App.js
 
 import React, { useState, useEffect } from 'react';
 import './App.css';
@@ -15,10 +14,9 @@ function App() {
     }
   }, []);
 
-  // --- FUNCȚIE NOUĂ ---
-  // Această funcție va fi apelată de LoginPage
+  
   const handleLoginSuccess = () => {
-    setIsLoggedIn(true); // Actualizează starea în părinte
+    setIsLoggedIn(true);
   };
 
   return (
@@ -28,8 +26,7 @@ function App() {
       {isLoggedIn ? (
         <Dashboard /> 
       ) : (
-        // --- MODIFICARE AICI ---
-        // Pasează funcția ca "prop" (proprietate) către LoginPage
+        
         <LoginPage onLoginSuccess={handleLoginSuccess} /> 
       )}
     </div>

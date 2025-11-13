@@ -5,28 +5,28 @@ import DeviceManagement from './DeviceManagement';
 import ClientDevices from './ClientDevices';
 
 function Dashboard() {
-  const authData = getAuthData(); // Obținem datele din token
-  const authId = localStorage.getItem('authId'); // ✅ Preluăm ID-ul din localStorage
+  const authData = getAuthData(); 
+  const authId = localStorage.getItem('authId'); 
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('role');
-    localStorage.removeItem('authId'); // ✅ Ștergem și ID-ul la logout
+    localStorage.removeItem('authId'); 
     window.location.reload();
   };
 
-  // Dacă token-ul e invalid -> delogare automată
+  
   if (!authData) {
     handleLogout();
-    return <p>Sesiune invalidă. Se încarcă...</p>;
+    return <p>Sesiune invalida. Se încarca...</p>;
   }
 
   return (
     <div style={{ padding: '20px', textAlign: 'center' }}>
       <h2>Dashboard</h2>
       <p>
-        Rolul tău este: <strong>{authData.role}</strong><br />
-        ID-ul tău de autentificare: <strong>{authData.userId}</strong>
+        Rolul tau este: <strong>{authData.role}</strong><br />
+        ID-ul tau de autentificare: <strong>{authData.userId}</strong>
       </p>
       <button
         onClick={handleLogout}
@@ -43,7 +43,7 @@ function Dashboard() {
       </button>
       <hr />
 
-      {/* 🔹 ADMINISTRATOR: poate gestiona useri și device-uri */}
+      {/* 🔹 ADMINISTRATOR: poate gestiona useri si device-uri */}
       {authData.role === 'ADMINISTRATOR' && (
         <div>
           <h3>Panou Administrator</h3>

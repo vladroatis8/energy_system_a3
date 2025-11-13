@@ -19,7 +19,7 @@ function UserManagement() {
       setError('');
     } catch (err) {
       console.error('Eroare fetch users:', err);
-      setError('Nu am putut încărca utilizatorii.');
+      setError('Nu am putut incarca utilizatorii.');
     }
   };
 
@@ -29,14 +29,14 @@ function UserManagement() {
 
   // ========================= DELETE =========================
   const handleDeleteUser = async (userId) => {
-    if (window.confirm('Ești sigur că vrei să ștergi acest utilizator?')) {
+    if (window.confirm('Esti sigur ca vrei sa stergi acest utilizator?')) {
       try {
         setLoading(true);
         await api.delete(`/users/${userId}`);
         await fetchUsers();
       } catch (err) {
         console.error('Eroare delete:', err);
-        setError('Eroare la ștergerea utilizatorului.');
+        setError('Eroare la stergerea utilizatorului.');
       } finally {
         setLoading(false);
       }
@@ -172,7 +172,7 @@ function UserManagement() {
           </select>
         </div>
 
-        {/* ✅ butonul centrat */}
+        {/* butonul  */}
         <div
           style={{
             display: 'flex',
@@ -197,10 +197,10 @@ function UserManagement() {
             }}
           >
             {loading
-              ? 'Se procesează...'
+              ? 'Se proceseaza...'
               : editUser
-              ? '💾 Salvează Modificările'
-              : '➕ Crează Utilizator'}
+              ? ' Salveaza Modificările'
+              : ' Creaza Utilizator'}
           </button>
 
           {editUser && (
@@ -238,7 +238,7 @@ function UserManagement() {
           {users.length === 0 ? (
             <tr>
               <td colSpan="4" style={{ textAlign: 'center', padding: '20px' }}>
-                Nu există utilizatori
+                Nu exista utilizatori
               </td>
             </tr>
           ) : (
@@ -257,7 +257,7 @@ function UserManagement() {
                       cursor: loading ? 'not-allowed' : 'pointer',
                     }}
                   >
-                    ✏️ Editează
+                    Editeaza
                   </button>
 
                   <button
@@ -268,7 +268,7 @@ function UserManagement() {
                       cursor: loading ? 'not-allowed' : 'pointer',
                     }}
                   >
-                    🗑️ Șterge
+                    Sterge
                   </button>
                 </td>
               </tr>

@@ -16,7 +16,7 @@ function ClientDevices() {
                 setError('');
             } catch (err) {
                 console.error('Eroare la preluarea device-urilor:', err);
-                setError('Nu s-au putut încărca dispozitivele.');
+                setError('Nu s-au putut incarca dispozitivele.');
             }
         };
 

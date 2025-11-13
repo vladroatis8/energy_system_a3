@@ -10,7 +10,6 @@ function DeviceManagement() {
     const [newDescription, setNewDescription] = useState('');
     const [newMaxConsumption, setNewMaxConsumption] = useState('');
 
-    // 🔹 1. Obținem toate device-urile
     const fetchDevices = async () => {
         try {
             const response = await api.get('/devices');
@@ -26,7 +25,6 @@ function DeviceManagement() {
         fetchDevices();
     }, []);
 
-    // 🔹 2. Creare device
     const handleCreateDevice = async (e) => {
         e.preventDefault();
         setLoading(true);
@@ -47,20 +45,18 @@ function DeviceManagement() {
         setLoading(false);
     };
 
-    // 🔹 3. Ștergere device
     const handleDeleteDevice = async (id) => {
-        if (window.confirm('Ești sigur că vrei să ștergi device-ul?')) {
+        if (window.confirm('Esti sigur ca vrei sa stergi device-ul?')) {
             try {
                 await api.delete(`/devices/${id}`);
                 fetchDevices();
             } catch (err) {
-                console.error('Eroare la ștergere:', err);
-                setError('Eroare la ștergerea device-ului.');
+                console.error('Eroare la stergere:', err);
+                setError('Eroare la stergerea device-ului.');
             }
         }
     };
 
-    // 🔹 4. Asignare device către un user
     const handleAssignDevice = async (deviceId) => {
         const userId = prompt('Introdu ID-ul utilizatorului:');
         if (!userId) return;
@@ -101,7 +97,7 @@ function DeviceManagement() {
                     required
                 />
                 <button type="submit" disabled={loading}>
-                    {loading ? 'Se creează...' : 'Creează Device'}
+                    {loading ? 'Se creeaza...' : 'Creează Device'}
                 </button>
             </form>
 
@@ -120,7 +116,7 @@ function DeviceManagement() {
                     {devices.length === 0 ? (
                         <tr>
                             <td colSpan="6" style={{ textAlign: 'center' }}>
-                                Nu există device-uri
+                                Nu exista device-uri
                             </td>
                         </tr>
                     ) : (
@@ -133,13 +129,13 @@ function DeviceManagement() {
                                 <td>{d.userId ?? '-'}</td>
                                 <td>
                                     <button onClick={() => handleAssignDevice(d.id)}>
-                                        Asignează
+                                        Asigneaza
                                     </button>
                                     <button
                                         onClick={() => handleDeleteDevice(d.id)}
                                         style={{ marginLeft: '5px' }}
                                     >
-                                        Șterge
+                                        Sterge
                                     </button>
                                 </td>
                             </tr>

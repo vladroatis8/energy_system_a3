@@ -31,7 +31,7 @@ public class AuthController {
 
 
     /**
-     * Endpoint pentru înregistrarea unui utilizator nou.
+     * Endpoint pentru inregistrarea unui utilizator nou.
      * http://localhost:8083/auth/register
      */
    @PostMapping("/register")
@@ -42,7 +42,7 @@ public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body("User already exists!");
     }
 
-    // ✅ Returnăm tot obiectul AuthResponse (nu doar text)
+    
     return ResponseEntity.status(HttpStatus.CREATED).body(response);
 }
 
@@ -55,17 +55,17 @@ public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
         AuthResponse authResponse = authService.login(request);
 
         if (authResponse != null) {
-            // Logarea a avut succes, trimitem token-ul și rolul
+            // Logarea a avut succes,
             return new ResponseEntity<>(authResponse, HttpStatus.OK); // 200 OK
         } else {
-            // Service-ul a returnat null (username sau parolă greșită)
+            
             return new ResponseEntity<>("Invalid username or password", HttpStatus.UNAUTHORIZED); // 401 Unauthorized
         }
     }
     @GetMapping("/ping")
     public ResponseEntity<String> ping() {
-        System.out.println("✅ === AUTH-CONTROLLER: Primită cerere PING! ===");
-    return ResponseEntity.ok("Auth-service este online ✅");
+        System.out.println("AUTH-CONTROLLER: Primita cerere PING!");
+    return ResponseEntity.ok("Auth-service este online ");
     }
 
     @GetMapping("/users")

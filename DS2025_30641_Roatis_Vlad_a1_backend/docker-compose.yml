@@ -103,6 +103,9 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.device-service.rule=PathPrefix(`/devices`)"
       - "traefik.http.services.device-service.loadbalancer.server.port=8080"
+      - "traefik.http.routers.devices-swagger.rule=PathPrefix(`/devices/swagger-ui`, `/devices/v3/api-docs`)"
+      - "traefik.http.routers.devices-swagger.service=devices"
+      
     networks:
       - app-network
 

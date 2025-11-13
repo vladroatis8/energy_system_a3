@@ -22,8 +22,8 @@ public class AuthUser {
     private String username;
 
     @Column(nullable = false)
-    private String password; // Aceasta va fi parola criptată
+    private String password; 
 
     @Column(nullable = false)
-    private String role; // "ADMINISTRATOR" sau "CLIENT" [cite: 710, 711]
+    private String role; 
 }

@@ -14,7 +14,7 @@ public class SwaggerConfig {
                 .info(new Info()
                         .title("User Service API")
                         .version("1.0")
-                        .description("Documentația Swagger pentru Users Microservice. "
+                        .description("DocumentaTia Swagger pentru Users Microservice. "
                                 + "Include CRUD uri."));
     }
 }

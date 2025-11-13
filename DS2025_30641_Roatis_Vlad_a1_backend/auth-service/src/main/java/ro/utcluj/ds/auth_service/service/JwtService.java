@@ -18,11 +18,10 @@ import java.util.function.Function;
 @Service
 public class JwtService {
 
-    // Injectăm cheia secretă din application.properties
     @Value("${jwt.secret}")
     private String SECRET_KEY;
 
-    // Generează un token doar pe baza datelor utilizatorului (username și rol)
+    // Genereaz un token doar pe baza datelor utilizatorului
     public String generateToken(AuthUser authUser) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", authUser.getId());
@@ -30,26 +29,24 @@ public class JwtService {
         return createToken(claims, authUser.getUsername());
     }
 
-    // Creează token-ul cu o valabilitate (ex: 10 ore)
+   
     private String createToken(Map<String, Object> claims, String subject) {
         return Jwts.builder()
-                .setClaims(claims) // Informațiile suplimentare (rol, id)
-                .setSubject(subject) // Subiectul token-ului (username-ul)
-                .setIssuedAt(new Date(System.currentTimeMillis())) // Când a fost creat
+                .setClaims(claims) // (rol, id)
+                .setSubject(subject) //  (username-ul)
+                .setIssuedAt(new Date(System.currentTimeMillis())) 
                 .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 10)) // Valabil 10 ore
-                .signWith(getSignKey(), SignatureAlgorithm.HS256) // Semnăm cu cheia secretă
+                .signWith(getSignKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
 
-    // Metodă helper pentru a obține cheia de semnare din textul secret
+    
     private Key getSignKey() {
         byte[] keyBytes = Decoders.BASE64.decode(SECRET_KEY);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
-    // --- Metode de validare a token-ului ---
-    // (Acestea vor fi folosite mai târziu de API Gateway sau de alte servicii)
-
+    
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
     }

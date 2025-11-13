@@ -36,53 +36,48 @@ public class UserService {
     }
 
     public UserEntity createUser(UserEntity user) {
-    // 1️⃣ Verificăm dacă există deja în user_db
     Optional<UserEntity> existingUser = userRepository.findByUsername(user.getUsername());
     if (existingUser.isPresent()) {
         System.err.println("⚠️ Username deja există în user_db: " + user.getUsername());
         return null;
     }
 
-    // 2️⃣ Reținem parola brută (înainte de criptare)
     String rawPassword = user.getPassword();
 
-    // 3️⃣ Criptăm parola pentru user_db
     user.setPassword(passwordEncoder.encode(rawPassword));
 
-    // 4️⃣ Salvăm utilizatorul local (temporar fără authId)
     UserEntity savedUser = userRepository.save(user);
 
-    // 5️⃣ Sincronizare cu auth_service
     try {
         RegisterRequest authRequest = new RegisterRequest(
             savedUser.getUsername(),
-            rawPassword,           // parola necriptată, auth_service o va cripta el
+            rawPassword,           
             savedUser.getRole()
         );
 
         String authUrl = "http://auth-service:8080/auth/register";
         System.out.println("➡️ Trimit cerere la " + authUrl + " pentru username=" + savedUser.getUsername());
 
-        // 🔹 Primim un obiect AuthResponse cu token, role, id
+        
         ResponseEntity<AuthResponse> response = restTemplate.postForEntity(authUrl, authRequest, AuthResponse.class);
 
         if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
             AuthResponse authResp = response.getBody();
-            String authId = authResp.getId(); // ✅ extragem ID-ul din auth-db
-            System.out.println("✅ User creat și în auth-service, id=" + authId);
+            String authId = authResp.getId(); 
+            System.out.println("user creat si in authservuce, id=" + authId);
 
-            // 🔹 Actualizăm userul local cu authId
+            
             savedUser.setAuthId(authId);
             userRepository.save(savedUser);
         } else {
-            System.err.println("⚠️ Auth-service a returnat un răspuns invalid: " + response.getStatusCode());
+            System.err.println("invalid" + response.getStatusCode());
         }
 
     } catch (HttpClientErrorException e) {
-        System.err.println("❌ Eroare HTTP la trimiterea către auth-service: " + e.getStatusCode());
+        System.err.println(" Eroare HTTP" + e.getStatusCode());
         System.err.println(e.getResponseBodyAsString());
     } catch (Exception e) {
-        System.err.println("❌ Eroare generală la trimiterea către auth-service: " + e.getMessage());
+        System.err.println("Eroare" + e.getMessage());
         e.printStackTrace();
     }
 

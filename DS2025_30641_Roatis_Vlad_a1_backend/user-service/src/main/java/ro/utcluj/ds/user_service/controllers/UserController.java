@@ -36,27 +36,27 @@ public class UserController {
 
     @PostMapping
     public ResponseEntity<?> createUser(@RequestBody UserEntity user) {
-        System.out.println("=== CONTROLLER: Primită cerere POST /users ===");
+        System.out.println("Primita cerere POST /users ===");
         System.out.println("Username: " + user.getUsername());
         System.out.println("Role: " + user.getRole());
         
         try {
             UserEntity savedUser = userService.createUser(user);
-            System.out.println("=== CONTROLLER: User creat cu succes ===");
+            System.out.println(" User creat cu succes ===");
             return new ResponseEntity<>(savedUser, HttpStatus.CREATED);
             
         } catch (IllegalArgumentException e) {
             String message = e.getMessage();
-            System.err.println("=== CONTROLLER: IllegalArgumentException - " + message + " ===");
+            System.err.println("IllegalArgumentException - " + message + " ===");
             
             if (message.equals("USERNAME_EXISTS_IN_USER_DB")) {
                 return new ResponseEntity<>(
-                    "Username există deja în user_db", 
+                    "Username exista deja în user_db", 
                     HttpStatus.BAD_REQUEST
                 );
             } else if (message.equals("USERNAME_EXISTS_IN_AUTH_DB")) {
                 return new ResponseEntity<>(
-                    "Username există deja în auth_db. Curăță baza de date auth_db!", 
+                    "Username exista deja în auth_db.", 
                     HttpStatus.CONFLICT
                 );
             } else {
@@ -68,12 +68,12 @@ public class UserController {
             
         } catch (RuntimeException e) {
             String message = e.getMessage();
-            System.err.println("=== CONTROLLER: RuntimeException - " + message + " ===");
+            System.err.println("RuntimeException - " + message + " ===");
             e.printStackTrace();
             
             if (message != null && message.startsWith("AUTH_SERVICE_UNAVAILABLE")) {
                 return new ResponseEntity<>(
-                    "Auth-service nu răspunde! Verifică: docker ps | grep auth-service", 
+                    "Auth-service nu merge!", 
                     HttpStatus.SERVICE_UNAVAILABLE
                 );
             } else {
@@ -84,10 +84,10 @@ public class UserController {
             }
             
         } catch (Exception e) {
-            System.err.println("=== CONTROLLER: Exception generală ===");
+            System.err.println("exceptie");
             e.printStackTrace();
             return new ResponseEntity<>(
-                "Eroare neașteptată: " + e.getClass().getName() + " - " + e.getMessage(), 
+                "Eroare" + e.getClass().getName() + " - " + e.getMessage(), 
                 HttpStatus.INTERNAL_SERVER_ERROR
             );
         }

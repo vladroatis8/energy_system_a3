@@ -61,7 +61,7 @@ public class DeviceService {
         return false; 
     }
     @Autowired
-private RestTemplate restTemplate; // ✅ asigură-te că ai RestTemplateConfig creat
+private RestTemplate restTemplate; 
 
 public DeviceEntity assignDeviceToUser(Long deviceId, Long userId) {
     Optional<DeviceEntity> deviceOpt = deviceRepository.findById(deviceId);
@@ -69,18 +69,15 @@ public DeviceEntity assignDeviceToUser(Long deviceId, Long userId) {
         throw new RuntimeException("Device not found");
     }
 
-    // 🔹 Verificăm în user-service dacă userul există
     String userServiceUrl = "http://user-service/users/" + userId;
     try {
         ResponseEntity<String> response = restTemplate.getForEntity(userServiceUrl, String.class);
         if (response.getStatusCode().is2xxSuccessful()) {
-            // 🔹 user există -> actualizăm device-ul
             DeviceEntity device = deviceOpt.get();
             device.setUserId(userId);
             return deviceRepository.save(device);
         }
     } catch (Exception e) {
-        // userul nu există sau user-service nu răspunde
         throw new RuntimeException("User not found in user-service");
     }
 

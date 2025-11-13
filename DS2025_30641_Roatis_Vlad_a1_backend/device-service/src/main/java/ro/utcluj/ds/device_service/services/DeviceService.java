@@ -66,19 +66,26 @@ private RestTemplate restTemplate;
 public DeviceEntity assignDeviceToUser(Long deviceId, Long userId) {
     Optional<DeviceEntity> deviceOpt = deviceRepository.findById(deviceId);
     if (deviceOpt.isEmpty()) {
-        throw new RuntimeException("Device not found");
+        throw new RuntimeException("Device not found with ID: " + deviceId);
     }
 
-    String userServiceUrl = "http://user-service/users/" + userId;
+    // 1. FIX: Am adăugat portul :8080
+    String userServiceUrl = "http://user-service:8080/users/" + userId;
+    
     try {
+        System.out.println("Incerc sa contactez: " + userServiceUrl); // Log pentru debug
         ResponseEntity<String> response = restTemplate.getForEntity(userServiceUrl, String.class);
+        
         if (response.getStatusCode().is2xxSuccessful()) {
             DeviceEntity device = deviceOpt.get();
             device.setUserId(userId);
             return deviceRepository.save(device);
         }
     } catch (Exception e) {
-        throw new RuntimeException("User not found in user-service");
+        // 2. FIX: Afișăm eroarea reală în consolă ca să știm DE CE nu merge
+        System.err.println("EROARE CONEXIUNE USER-SERVICE: " + e.getMessage());
+        e.printStackTrace();
+        throw new RuntimeException("Nu am putut asigna: " + e.getMessage());
     }
 
     return null;

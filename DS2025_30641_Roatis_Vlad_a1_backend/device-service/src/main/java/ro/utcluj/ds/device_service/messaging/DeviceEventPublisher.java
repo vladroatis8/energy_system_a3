@@ -3,8 +3,11 @@ package ro.utcluj.ds.device_service.messaging;
 import org.springframework.amqp.core.AmqpTemplate;
 import org.springframework.stereotype.Service;
 
+import ro.utcluj.ds.device_service.config.RabbitConfig;
 
-import static ro.utcluj.ds.device_service.config.RabbitConfig.DEVICE_EXCHANGE;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 public class DeviceEventPublisher {
@@ -16,10 +19,20 @@ public class DeviceEventPublisher {
     }
 
     public void publishDeviceCreated(DeviceCreatedEvent event) {
-        amqpTemplate.convertAndSend(DEVICE_EXCHANGE, "device.created", event);
-    }
+    Map<String, Object> msg = new HashMap<>();
+    msg.put("eventType", "CREATED");
+    msg.put("id", event.getId());
+    msg.put("name", event.getName());
+    msg.put("maxConsumption", event.getMaxConsumption());
+
+    amqpTemplate.convertAndSend(RabbitConfig.SYNC_QUEUE, msg);
+}
 
     public void publishDeviceDeleted(DeviceDeletedEvent event) {
-        amqpTemplate.convertAndSend(DEVICE_EXCHANGE, "device.deleted", event);
-    }
+    Map<String, Object> msg = new HashMap<>();
+    msg.put("eventType", "DELETED");
+    msg.put("id", event.getId());
+
+    amqpTemplate.convertAndSend(RabbitConfig.SYNC_QUEUE, msg);
+}
 }

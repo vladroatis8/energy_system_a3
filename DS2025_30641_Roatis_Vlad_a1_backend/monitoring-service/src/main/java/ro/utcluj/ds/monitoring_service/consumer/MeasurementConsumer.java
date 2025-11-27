@@ -16,7 +16,6 @@ public class MeasurementConsumer {
 
     @RabbitListener(queues = "${app.queue.device-measurements}")
     public void handleMeasurement(MeasurementMessage message) {
-        // aici putem pune logging daca vrei
         monitoringService.processMeasurement(message);
     }
 }

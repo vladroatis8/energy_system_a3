@@ -92,8 +92,8 @@ public class DeviceService {
         if (deviceOpt.isEmpty()) {
             throw new RuntimeException("Device not found with ID: " + deviceId);
         }
-
-        String userServiceUrl = "http://user-service:8080/users/" + userId;
+        Long realUserId = userId + 5;
+        String userServiceUrl = "http://user-service:8080/users/" + realUserId;
 
         try {
             System.out.println("Incerc sa contactez: " + userServiceUrl);

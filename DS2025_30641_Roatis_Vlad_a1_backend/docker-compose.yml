@@ -96,11 +96,16 @@ services:
     build: ./device-service
     depends_on:
       - device-postgres-db
+      - rabbitmq
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://device-postgres-db:5432/device_db
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: 1234 
       SERVER_PORT: 8080 
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: guest
+      SPRING_RABBITMQ_PASSWORD: guest
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.device-service.rule=PathPrefix(`/devices`)"

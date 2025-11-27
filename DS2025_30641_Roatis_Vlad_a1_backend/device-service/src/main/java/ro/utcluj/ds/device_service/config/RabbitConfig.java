@@ -1,16 +1,21 @@
 package ro.utcluj.ds.device_service.config;
 
-import org.springframework.amqp.core.TopicExchange;
+import org.springframework.amqp.core.Queue;
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
+import org.springframework.amqp.support.converter.MessageConverter;             
 @Configuration
 public class RabbitConfig {
 
-    public static final String DEVICE_EXCHANGE = "device.sync.exchange";
+    public static final String SYNC_QUEUE = "device.sync.queue";
 
     @Bean
-    public TopicExchange deviceExchange() {
-        return new TopicExchange(DEVICE_EXCHANGE);
+    public Queue syncQueue() {
+        return new Queue(SYNC_QUEUE, true);
+    }
+    @Bean
+    public MessageConverter jsonMessageConverter() {
+        return new Jackson2JsonMessageConverter();
     }
 }

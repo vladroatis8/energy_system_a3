@@ -10,6 +10,9 @@ public class DeviceEntity {
 
     @Id
     private Long id;
+    
+    private String name;
+    private Double maxConsumption;
 
     public DeviceEntity() {}
 
@@ -25,13 +28,19 @@ public class DeviceEntity {
         this.id = id;
     }
 
+    public String getName() {
+        return name;
+    }
+
     public void setName(String name) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'setName'");
+        this.name = name;
+    }
+
+    public Double getMaxConsumption() {
+        return maxConsumption;
     }
 
     public void setMaxConsumption(Double maxConsumption) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'setMaxConsumption'");
+        this.maxConsumption = maxConsumption;
     }
 }

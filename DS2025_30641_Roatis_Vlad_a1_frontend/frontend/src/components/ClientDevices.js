@@ -1,22 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import api from '../api';
 import { getAuthData } from '../api';
+import ClientConsumption from './ClientConsumption';
 
 function ClientDevices() {
     const [devices, setDevices] = useState([]);
     const [error, setError] = useState('');
+    const [selectedDeviceId, setSelectedDeviceId] = useState(null);
+
     const authData = getAuthData();
 
     useEffect(() => {
         const fetchDevices = async () => {
             try {
-                console.log("🔍 authData:", authData);
                 const response = await api.get(`/devices/user/${authData.userId}`);
                 setDevices(response.data);
                 setError('');
             } catch (err) {
-                console.error('Eroare la preluarea device-urilor:', err);
-                setError('Nu s-au putut incarca dispozitivele.');
+                setError('Nu s-au putut încărca dispozitivele.');
             }
         };
 
@@ -24,9 +25,11 @@ function ClientDevices() {
             fetchDevices();
         }
     }, [authData]);
-    console.log("Dashboard authData:", authData);
+
     return (
         <div>
+            <h2>Dispozitivele mele</h2>
+
             {error && <p style={{ color: 'red' }}>{error}</p>}
 
             {devices.length === 0 ? (
@@ -39,6 +42,7 @@ function ClientDevices() {
                             <th>Nume</th>
                             <th>Descriere</th>
                             <th>Consum maxim</th>
+                            <th>Actiuni</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -48,10 +52,22 @@ function ClientDevices() {
                                 <td>{device.name}</td>
                                 <td>{device.description}</td>
                                 <td>{device.maxConsumption}</td>
+                                <td>
+                                    <button onClick={() => setSelectedDeviceId(device.id)}>
+                                        Vezi consum
+                                    </button>
+                                </td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
+            )}
+
+            {selectedDeviceId && (
+                <div style={{ marginTop: '30px' }}>
+                    <h3>Istoric consum pentru device #{selectedDeviceId}</h3>
+                    <ClientConsumption deviceId={selectedDeviceId} />
+                </div>
             )}
         </div>
     );

@@ -46,6 +46,7 @@ services:
     networks:
       - app-network
 
+  
   # bd pt useri
   user-postgres-db:
     image: postgres:13
@@ -146,6 +147,47 @@ services:
       - "traefik.http.services.frontend.loadbalancer.server.port=80"
     networks:
       - app-network
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "15672:15672"  # UI
+      - "5672:5672"    # broker
+    networks:
+      - app-network
+  monitoring-postgres-db:
+    image: postgres:15
+    container_name: monitoring_postgres_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: monitoring_db
+    volumes:
+      - monitoring-db-data:/var/lib/postgresql/data
+    networks:
+      - app-network
+  monitoring-service:
+    build: ./monitoring-service
+    container_name: monitoring-service
+    depends_on:
+      - monitoring-postgres-db
+      - rabbitmq
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://monitoring-postgres-db:5432/monitoring_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 1234
+
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: guest
+      SPRING_RABBITMQ_PASSWORD: guest
+
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.monitoring.rule=PathPrefix(`/api/consumption`)"
+      - "traefik.http.services.monitoring.loadbalancer.server.port=8084"
+    networks:
+      - app-network
 
 networks:
   app-network:  
@@ -155,3 +197,4 @@ volumes:
   user-db-data:
   device-db-data:
   auth-db-data:
+  monitoring-db-data:

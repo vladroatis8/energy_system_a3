@@ -27,20 +27,28 @@ export const getAuthData = () => {
 
     try {
         const decodedToken = jwtDecode(token);
-        
+
         if (decodedToken.exp * 1000 < Date.now()) {
-            localStorage.removeItem('token'); 
+            localStorage.removeItem('token');
             localStorage.removeItem('role');
             return null;
         }
+
         return {
             userId: decodedToken.userId,
-            role: decodedToken.role
+            role: decodedToken.role,
+            token: token   
         };
     } catch (e) {
         console.error('Token invalid:', e);
-        return null; 
+        return null;
     }
 };
+
+export async function getDeviceDailyConsumption(deviceId, date) {
+    const response = await api.get(`/api/consumption/device/${deviceId}?date=${date}`);
+    return response.data;
+}
+
 
 export default api;

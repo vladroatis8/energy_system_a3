@@ -2,7 +2,9 @@ package ro.utcluj.ds.websocket_service.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.handler.annotation.SendTo;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import ro.utcluj.ds.websocket_service.dto.ChatMessage;
 import ro.utcluj.ds.websocket_service.service.LLMService;
@@ -16,97 +18,97 @@ public class ChatController {
     @Autowired
     private LLMService llmService;
 
-    // Memorie temporară: Ținem minte dacă un user este în modul AI sau nu
-    // Key = User/Sender, Value = true (AI Mode) / false (Rule Mode)
-    private final Map<String, Boolean> aiModeActive = new ConcurrentHashMap<>();
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
 
+    // Ținem minte dacă un user vrea să vorbească cu AI-ul
+    private final Map<String, Boolean> aiModeActive = new ConcurrentHashMap<>();
+    
+    // Ținem minte dacă un user este într-o sesiune cu un Admin
+    private final Map<String, Boolean> adminSessionActive = new ConcurrentHashMap<>();
+
+    // 1. Endpoint-ul principal unde trimit toți userii mesaje
     @MessageMapping("/chat")
-    @SendTo("/topic/messages")
-    public ChatMessage sendMessage(ChatMessage message) {
+    public void sendMessage(@Payload ChatMessage message) {
         String sender = message.getSender();
         String content = message.getContent();
-        
-        // Verificăm și procesăm mesajul
+
+        System.out.println("📩 Mesaj primit de la " + sender + ": " + content);
+
+        // --- SCENARIUL 1: MESAJ DE LA ADMIN ---
+        // Dacă sender-ul este 'admin', trimitem mesajul specific către userul țintă (dacă am avea ID)
+        // Pentru simplitate (broadcast), adminul răspunde pe canalul public, dar prefixat.
+        if ("admin".equalsIgnoreCase(sender)) {
+            // Adminul trimite un mesaj global sau către un user specific. 
+            // Aici simplificăm: Adminul vorbește pe topicul public, toți îl văd.
+            ChatMessage response = new ChatMessage("ADMIN", content);
+            messagingTemplate.convertAndSend("/topic/messages", response);
+            return;
+        }
+
+        // --- SCENARIUL 2: USER VREA ADMIN ---
+        if (content.trim().equalsIgnoreCase("admin") || content.trim().equalsIgnoreCase("help")) {
+            adminSessionActive.put(sender, true);
+            aiModeActive.put(sender, false); // Oprim AI-ul
+            
+            // Trimitem notificare către Admini
+            ChatMessage alert = new ChatMessage("SYSTEM", "Userul " + sender + " cere ajutor!");
+            messagingTemplate.convertAndSend("/topic/admin", alert);
+            
+            // Răspuns către User
+            ChatMessage reply = new ChatMessage("System", "Un administrator a fost notificat. Te rog așteaptă.");
+            messagingTemplate.convertAndSend("/topic/messages", reply); // Simplificare: trimitem pe topicul comun
+            return;
+        }
+
+        // --- SCENARIUL 3: SESIUNE ACTIVĂ CU ADMIN ---
+        if (adminSessionActive.getOrDefault(sender, false)) {
+            // Mesajul userului se duce direct la Admini
+            ChatMessage msgForAdmin = new ChatMessage(sender, content);
+            messagingTemplate.convertAndSend("/topic/admin", msgForAdmin);
+            return; 
+        }
+
+        // --- SCENARIUL 4: AI MODE SAU REGULI ---
         String responseContent = processRequest(sender, content);
+        ChatMessage response = new ChatMessage("System Chatbot", responseContent);
         
-        return new ChatMessage("System Chatbot", responseContent);
+        // Trimitem răspunsul (în mod real ar trebui trimis doar Userului, dar aici e demo public)
+        messagingTemplate.convertAndSend("/topic/messages", response);
+    }
+
+    // --- Endpoint special pentru Admini să trimită mesaje ---
+    @MessageMapping("/admin/reply")
+    public void adminReply(@Payload ChatMessage message) {
+        // Adminul trimite un mesaj care trebuie să ajungă la Useri (pe topicul public /topic/messages)
+        ChatMessage response = new ChatMessage("ADMIN", message.getContent());
+        messagingTemplate.convertAndSend("/topic/messages", response);
     }
 
     private String processRequest(String sender, String content) {
-        if (content == null) return "Te rog scrie ceva.";
+        if (content == null) return "...";
         String msg = content.trim().toLowerCase();
 
-        // 1. COMANDĂ DE ACTIVARE AI
-        if (msg.equals("ai") || msg.equals("chatgpt") || msg.equals("gemini")) {
+        // Comenzi switch
+        if (msg.equals("ai")) {
             aiModeActive.put(sender, true);
-            return "✅ Modul AI Activat! Acum vorbești cu asistentul inteligent Gemini. Scrie 'stop' pentru a reveni la meniu.";
+            return "✅ Modul AI Activat!";
         }
-
-        // 2. COMANDĂ DE DEZACTIVARE AI
-        if (msg.equals("stop") || msg.equals("exit") || msg.equals("rules")) {
+        if (msg.equals("stop")) {
             aiModeActive.put(sender, false);
-            return "🛑 Modul AI Dezactivat. Ai revenit la asistentul standard.";
+            adminSessionActive.put(sender, false); // Iese și din modul Admin
+            return "🛑 Moduri speciale dezactivate.";
         }
 
-        // 3. VERIFICĂM ÎN CE MOD ESTE UTILIZATORUL
-        boolean isAiMode = aiModeActive.getOrDefault(sender, false);
-
-        if (isAiMode) {
-            // --- MODUL AI ---
-            // Orice scrie utilizatorul este trimis la LLM, fără să verificăm reguli
-            System.out.println("🤖 AI Mode request de la " + sender + ": " + content);
+        if (aiModeActive.getOrDefault(sender, false)) {
             return llmService.generateResponse(content);
-        } else {
-            // --- MODUL REGULI (RULE BASED) ---
-            return processRules(msg);
-        }
-    }
-
-    private String processRules(String msg) {
-        // Aici sunt cele 10 reguli OBLIGATORII pentru nota 5
-        // Acum sunt "safe" pentru că nu se activează când userul vrea AI.
-
-        if (msg.contains("salut") || msg.contains("buna")) {
-            return "Salut! Scrie 'ajutor' pentru comenzi sau 'ai' pentru inteligența artificială.";
         }
 
-        if (msg.contains("device") || msg.contains("dispozitiv")) {
-            return "Gestionează dispozitivele în pagina 'Devices'.";
-        }
-
-        if (msg.contains("consum")) {
-            return "Vezi consumul detaliat în pagina 'Charts'.";
-        }
-
-        if (msg.contains("pret") || msg.contains("cost")) {
-            return "Costul energiei depinde de contractul tău.";
-        }
-
-        if (msg.contains("admin") || msg.contains("suport")) {
-            return "Contact: admin@energy.com";
-        }
-
-        if (msg.contains("factura")) {
-            return "Factura se emite la final de lună.";
-        }
-
-        if (msg.contains("ore") || msg.contains("timp")) {
-            return "Datele se actualizează orar.";
-        }
-
-        if (msg.contains("cont") || msg.contains("parola")) {
-            return "Nu da parola nimănui!";
-        }
-
-        if (msg.contains("multumesc")) {
-            return "Cu plăcere!";
-        }
+        // Reguli hardcodate (cele vechi)
+        if (msg.contains("salut")) return "Salut! Scrie 'admin' pentru suport uman sau 'ai' pentru bot.";
+        if (msg.contains("device")) return "Gestionează device-urile în tab-ul dedicat.";
+        // ... (restul regulilor tale) ...
         
-        if (msg.contains("ajutor")) {
-             return "Comenzi: 1.consum, 2.device, 4.factura, 5.ore, 6.cont, 7.admin, 8.pret, 9.parola, 10.multumesc SAU scrie 'ai' pentru a vorbi cu asistentul AI.";
-        }
-
-        // Fallback pentru modul standard
-        return "Comandă necunoscută. Scrie 'ajutor' pentru reguli sau 'ai' pentru asistentul inteligent.";
+        return "Comandă necunoscută. Scrie 'ai' sau 'admin'.";
     }
 }

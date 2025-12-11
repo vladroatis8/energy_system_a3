@@ -42,6 +42,10 @@ services:
       - "traefik.http.routers.device.rule=PathPrefix(`/devices`)"
       - "traefik.http.services.device.loadbalancer.server.port=8080"
       - "traefik.http.routers.device.entrypoints=web"
+      # WebSocket support
+      - "traefik.http.routers.websocket.rule=PathPrefix(`/ws`)"
+      - "traefik.http.services.websocket.loadbalancer.server.port=8085"
+      - "traefik.http.routers.websocket.entrypoints=web"
 
     networks:
       - app-network
@@ -191,6 +195,25 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.monitoring.rule=PathPrefix(`/api/consumption`)"
       - "traefik.http.services.monitoring.loadbalancer.server.port=8084"
+    networks:
+      - app-network
+
+  websocket-service:
+    build: ./websocket-service
+    container_name: websocket-service
+    depends_on:
+      - rabbitmq
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: guest
+      SPRING_RABBITMQ_PASSWORD: guest
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.websocket-service.rule=PathPrefix(`/ws`)"
+      - "traefik.http.services.websocket-service.loadbalancer.server.port=8085"
+    ports:
+      - "8085:8085"
     networks:
       - app-network
 

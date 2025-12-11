@@ -22,7 +22,6 @@ function ClientConsumption({ deviceId }) {
         const fetchData = async () => {
             try {
                 const response = await getDeviceDailyConsumption(deviceId, date);
-                console.log("Date consum:", response);
                 setData(response);
             } catch (err) {
                 console.error("Eroare la preluarea consumului:", err);

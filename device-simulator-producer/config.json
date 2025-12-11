@@ -1,5 +1,5 @@
 {
-  "device_id": 20,
+  "device_id": 25,
   "rabbit_host": "localhost",
   "queue_name": "device_measurements_queue",
   "interval_seconds": 10

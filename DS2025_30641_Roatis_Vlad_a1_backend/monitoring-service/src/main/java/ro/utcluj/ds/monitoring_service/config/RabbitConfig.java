@@ -13,16 +13,22 @@ public class RabbitConfig {
     @Value("${app.queue.device-measurements}")
     private String deviceMeasurementsQueue;
 
+    public static final String SYNC_QUEUE = "device.sync.queue";
+    private static final String OVERCONSUMPTION_QUEUE = "overconsumption_queue";
+
     @Bean
     public Queue deviceMeasurementsQueue() {
         return new Queue(deviceMeasurementsQueue, true);
     }
 
-    public static final String SYNC_QUEUE = "device.sync.queue";
-
     @Bean
     public Queue syncQueue() {
         return new Queue(SYNC_QUEUE, true);
+    }
+
+    @Bean
+    public Queue overconsumptionQueue() {
+        return new Queue(OVERCONSUMPTION_QUEUE, true);
     }
 
     @Bean

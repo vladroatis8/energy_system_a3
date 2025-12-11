@@ -208,6 +208,7 @@ services:
       SPRING_RABBITMQ_PORT: 5672
       SPRING_RABBITMQ_USERNAME: guest
       SPRING_RABBITMQ_PASSWORD: guest
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.websocket-service.rule=PathPrefix(`/ws`)"

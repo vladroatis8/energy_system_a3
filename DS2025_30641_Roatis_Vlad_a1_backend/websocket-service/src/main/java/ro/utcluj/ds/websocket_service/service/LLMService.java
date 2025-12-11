@@ -1,7 +1,7 @@
 package ro.utcluj.ds.websocket_service.service;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -15,11 +15,12 @@ import java.util.Map;
 @Service
 public class LLMService {
 
-    private static final String API_KEY = "AIzaSyCFnBe3skiGU28HokoGyX9qgbAFrYybClw";
-    
-    private static final String API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=" + API_KEY;
+    @Value("${gemini.api.key}")
+    private String apiKey;
 
     private final RestTemplate restTemplate;
+
+    private static final String MODEL_NAME = "gemini-2.5-flash";
 
     public LLMService() {
         this.restTemplate = new RestTemplate();
@@ -27,9 +28,18 @@ public class LLMService {
 
     @SuppressWarnings("unchecked")
     public String generateResponse(String userMessage) {
+        if (apiKey == null || apiKey.trim().isEmpty()) {
+            return "⚠️ API Key neconfigurat.";
+        }
+
         try {
+            String apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/" 
+                          + MODEL_NAME 
+                          + ":generateContent?key=" + apiKey;
+
             Map<String, String> part = new HashMap<>();
-            part.put("text", "Ești un asistent util pentru o companie de energie. Răspunde scurt și concis în limba română la această cerere: " + userMessage);
+            part.put("text", "Ești un asistent inteligent pentru o aplicație de monitorizare a energiei. " +
+                             "Răspunde scurt, la obiect și politicos în limba română la următoarea întrebare: " + userMessage);
 
             Map<String, Object> content = new HashMap<>();
             content.put("parts", List.of(part));
@@ -42,7 +52,7 @@ public class LLMService {
 
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
-            ResponseEntity<Map> response = restTemplate.postForEntity(API_URL, entity, Map.class);
+            ResponseEntity<Map> response = restTemplate.postForEntity(apiUrl, entity, Map.class);
 
             if (response.getBody() != null) {
                 Map<String, Object> body = response.getBody();
@@ -58,30 +68,11 @@ public class LLMService {
                     }
                 }
             }
-            return "AI-ul nu a răspuns.";
+            return "AI-ul nu a returnat niciun text.";
 
-        } catch (HttpClientErrorException e) {
-            // Dacă nici 2.0 nu merge, vedem exact ce modele ai disponibile
-            if (e.getStatusCode().value() == 404) {
-                System.out.println("⚠️ Modelul 2.0 nu a fost găsit. Listăm modelele disponibile...");
-                listAvailableModels(); 
-                return "Eroare: Model indisponibil. Vezi consola pentru lista de modele.";
-            }
-            return "Eroare AI: " + e.getStatusText();
         } catch (Exception e) {
-            e.printStackTrace();
-            return "Eroare internă.";
-        }
-    }
-
-    private void listAvailableModels() {
-        try {
-            String listUrl = "https://generativelanguage.googleapis.com/v1beta/models?key=" + API_KEY;
-            ResponseEntity<String> response = restTemplate.getForEntity(listUrl, String.class);
-            System.out.println("📋 MODELE DISPONIBILE (Copiază un 'name' de aici în API_URL):");
-            System.out.println(response.getBody());
-        } catch (Exception ex) {
-            System.err.println("Nu pot lista modelele: " + ex.getMessage());
+            System.err.println("❌ Eroare Gemini API: " + e.getMessage());
+            return "Îmi pare rău, momentan nu pot contacta creierul digital. Te rog încearcă mai târziu.";
         }
     }
 }

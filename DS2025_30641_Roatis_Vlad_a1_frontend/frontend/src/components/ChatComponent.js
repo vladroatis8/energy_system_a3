@@ -8,79 +8,83 @@ const ChatComponent = () => {
     const [connected, setConnected] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
     
-    // Stare internă pentru User și dacă e Admin
+    // Stare pentru User și Rol
     const [currentUser, setCurrentUser] = useState("Guest");
     const [isAdmin, setIsAdmin] = useState(false);
 
     const stompClientRef = useRef(null);
     const messagesEndRef = useRef(null);
 
-    // --- 1. MONITORIZARE LOGIN (Rulează la fiecare secundă) ---
+    // --- 1. MONITORIZARE LOGIN ---
     useEffect(() => {
         const checkIdentity = () => {
-            // Citim direct din browser ce a salvat pagina de Login
+            // Citim username-ul salvat la login. Dacă nu există, e Guest.
             const storedName = localStorage.getItem("username") || "Guest";
-            const storedRole = localStorage.getItem("role"); // Ex: "ADMINISTRATOR"
+            const storedRole = localStorage.getItem("role");
 
-            // AICI ERA PROBLEMA: Verificăm dacă rolul este ADMINISTRATOR
             const isUserAdmin = storedRole === "ADMIN" || storedRole === "ADMINISTRATOR";
 
-            // Dacă s-a schimbat ceva față de ce știe chat-ul acum, actualizăm
             if (storedName !== currentUser || isUserAdmin !== isAdmin) {
-                console.log(`🔄 Schimbare utilizator detectată: ${storedName} (Admin: ${isUserAdmin})`);
+                console.log(`🔄 User: ${storedName}, Admin: ${isUserAdmin}`);
                 setCurrentUser(storedName);
                 setIsAdmin(isUserAdmin);
-                setMessages([]); // Golim chatul vechi
+                setMessages([]); 
             }
         };
 
-        const interval = setInterval(checkIdentity, 1000); // Verifică la fiecare 1s
-        checkIdentity(); // Verifică și imediat la încărcare
+        const interval = setInterval(checkIdentity, 1000);
+        checkIdentity(); 
 
         return () => clearInterval(interval);
     }, [currentUser, isAdmin]);
 
-
-    // --- 2. CONEXIUNEA WEBSOCKET (Se reface automat când se schimbă userul) ---
+    // --- 2. CONEXIUNE WEBSOCKET ---
     useEffect(() => {
-        // Opțional: Nu ne conectăm dacă e Guest (sau lăsăm doar pentru AI)
-        // if (currentUser === "Guest") return;
-
         const client = new Client({
-            // URL-ul prin Traefik
             webSocketFactory: () => new SockJS('http://localhost/ws'),
-            
             onConnect: () => {
-                console.log(`✅ Chat conectat ca: ${currentUser}`);
                 setConnected(true);
 
-                // 1. Canal Public (Răspunsuri AI, Răspunsuri de la Admin către mine)
+                // A. CANAL PUBLIC (Aici vin mesajele vizibile tuturor)
                 client.subscribe('/topic/messages', (message) => {
                     const body = JSON.parse(message.body);
+                    
+                    // --- FILTRARE PENTRU A EVITA DUBLURILE ---
+                    
+                    // 1. Dacă sunt Admin și mesajul vine de la "ADMIN" (adică de la mine via server), îl ignor
+                    //    pentru că l-am afișat deja local când am dat Send.
+                    if (isAdmin && (body.sender === "ADMIN" || body.sender === "admin")) {
+                        return; 
+                    }
+
+                    // 2. Dacă sunt Client și mesajul vine de la mine (numele meu), îl ignor
+                    //    (tot pentru că l-am afișat local).
+                    if (!isAdmin && body.sender === currentUser) {
+                        return;
+                    }
+
+                    // Dacă trece de filtre, îl afișez
                     addMessage(body.sender, body.content);
                 });
 
-                // 2. Canal Privat Admin (Doar dacă ești Admin)
-                // Aici vin mesajele de la userii care scriu "admin"
+                // B. CANAL PRIVAT ADMIN (Doar Adminii văd cererile de suport)
                 if (isAdmin) {
-                    console.log("🛡️ Mod Admin: Abonare la canalul de suport.");
                     client.subscribe('/topic/admin', (message) => {
                         const body = JSON.parse(message.body);
+                        // Aici afișăm mesajele care vin de la useri pe canalul de suport
                         addMessage(`USER-SUPPORT (${body.sender})`, body.content);
                     });
                 }
             },
-            onStompError: (frame) => console.error("Eroare WebSocket:", frame),
+            onStompError: (frame) => console.error("Eroare WS:", frame),
             reconnectDelay: 5000, 
         });
 
         client.activate();
         stompClientRef.current = client;
 
-        return () => {
-            if (client.active) client.deactivate();
-        };
-    }, [currentUser, isAdmin]); // <--- Se re-execută când devii Admin
+        return () => { if (client.active) client.deactivate(); };
+    }, [currentUser, isAdmin]);
 
     // Auto-scroll
     useEffect(() => {
@@ -93,46 +97,92 @@ const ChatComponent = () => {
 
     const sendMessage = () => {
         if (input.trim() && stompClientRef.current && connected) {
+            
+            // Numele cu care trimit la server
+            const senderName = isAdmin ? "ADMIN" : currentUser;
+            
             const chatMessage = {
-                // Dacă sunt admin, trimit cu numele "admin", altfel cu username-ul meu
-                sender: isAdmin ? "admin" : currentUser, 
+                sender: senderName,
                 content: input
             };
 
-            // LOGICA DE RUTARE:
-            // Admin -> trimite Reply (ajunge la toată lumea/user)
-            // User -> trimite Chat (backend-ul decide dacă e pt AI sau pt Admin)
             const destination = isAdmin ? "/app/admin/reply" : "/app/chat";
 
+            // 1. Trimit la server
             stompClientRef.current.publish({
                 destination: destination,
                 body: JSON.stringify(chatMessage)
             });
+
+            // 2. Afișez LOCAL (ca să văd ce am scris imediat)
+            // Aici e cheia: pentru că îl adaug aici, trebuie să îl ignor când vine înapoi de la server (vezi sus)
+            addMessage("Eu", input);
+            
             setInput('');
         }
     };
 
-    // --- STILURI VIZUALE ---
-    const headerColor = isAdmin ? '#dc3545' : '#007bff'; // Roșu (Admin) vs Albastru (Client)
+    // --- STILURI ---
+    const headerColor = isAdmin ? '#dc3545' : '#007bff'; 
 
     const styles = {
-        container: { position: 'fixed', bottom: '20px', right: '20px', zIndex: 1000, display: 'flex', flexDirection: 'column', alignItems: 'flex-end' },
-        button: { backgroundColor: headerColor, color: 'white', border: 'none', borderRadius: '50%', width: '60px', height: '60px', cursor: 'pointer', boxShadow: '0 4px 8px rgba(0,0,0,0.2)', fontSize: '24px', display: 'flex', justifyContent: 'center', alignItems: 'center' },
-        chatWindow: { width: '350px', height: '500px', backgroundColor: 'white', borderRadius: '10px', boxShadow: '0 5px 15px rgba(0,0,0,0.3)', display: 'flex', flexDirection: 'column', overflow: 'hidden', marginBottom: '15px', border: '1px solid #ddd' },
-        header: { backgroundColor: headerColor, color: 'white', padding: '15px', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-        messagesArea: { flex: 1, padding: '15px', overflowY: 'auto', backgroundColor: '#f9f9f9', display: 'flex', flexDirection: 'column', gap: '10px' },
-        messageBubble: (sender) => {
-            // Mesajul e "al meu" dacă numele coincide sau dacă sunt admin și expeditorul e "admin"
-            const isMe = sender === currentUser || (isAdmin && sender === 'admin') || sender === 'Me';
-            const isSupport = sender.startsWith("USER-SUPPORT"); // Mesaje de la useri către admin
-            
-            let bg = isMe ? headerColor : (isSupport ? '#ffc107' : '#e9ecef');
-            let txt = isMe ? 'white' : 'black';
-            return { maxWidth: '80%', padding: '10px', borderRadius: '10px', alignSelf: isMe ? 'flex-end' : 'flex-start', backgroundColor: bg, color: txt, fontSize: '14px', boxShadow: '0 1px 2px rgba(0,0,0,0.1)' };
+        container: { 
+            position: 'fixed', bottom: '20px', right: '20px', zIndex: 9999,
+            display: 'flex', flexDirection: 'column', alignItems: 'flex-end' 
         },
-        inputArea: { padding: '10px', borderTop: '1px solid #ddd', display: 'flex', gap: '10px', backgroundColor: 'white' },
-        input: { flex: 1, padding: '8px', borderRadius: '5px', border: '1px solid #ccc', outline: 'none' },
-        sendBtn: { padding: '8px 15px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }
+        button: { 
+            backgroundColor: headerColor, color: 'white', border: 'none', 
+            borderRadius: '50%', width: '60px', height: '60px', 
+            cursor: 'pointer', boxShadow: '0 4px 10px rgba(0,0,0,0.3)', 
+            fontSize: '28px', display: 'flex', justifyContent: 'center', alignItems: 'center' 
+        },
+        chatWindow: { 
+            width: '350px', height: '500px',
+            backgroundColor: 'white', borderRadius: '12px', 
+            boxShadow: '0 8px 24px rgba(0,0,0,0.2)', 
+            display: 'flex', flexDirection: 'column', overflow: 'hidden', 
+            marginBottom: '16px', border: '1px solid #ddd' 
+        },
+        header: { 
+            backgroundColor: headerColor, color: 'white', padding: '16px', 
+            fontWeight: 'bold', fontSize: '16px',
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center' 
+        },
+        messagesArea: { 
+            flex: 1, padding: '16px', overflowY: 'auto', backgroundColor: '#f5f7fb', 
+            display: 'flex', flexDirection: 'column', gap: '12px' 
+        },
+        inputArea: { 
+            padding: '12px', borderTop: '1px solid #eee', display: 'flex', gap: '8px', backgroundColor: 'white' 
+        },
+        input: { 
+            flex: 1, padding: '10px', borderRadius: '20px', border: '1px solid #ccc', outline: 'none' 
+        },
+        sendBtn: { 
+            padding: '10px 16px', backgroundColor: '#28a745', color: 'white', 
+            border: 'none', borderRadius: '20px', cursor: 'pointer', fontWeight: 'bold'
+        },
+        bubble: (sender) => {
+            const isMe = sender === "Eu";
+            const isSupport = sender.startsWith("USER-SUPPORT");
+            const isSystem = sender === "System Chatbot";
+
+            let align = isMe ? 'flex-end' : 'flex-start';
+            let bg = isMe ? headerColor : 'white';
+            let txt = isMe ? 'white' : '#333';
+            
+            if (isSupport) { bg = '#ffeeba'; txt = '#856404'; } 
+            if (isSystem) { bg = '#e2e3e5'; txt = '#383d41'; } 
+
+            return {
+                maxWidth: '75%', padding: '10px 14px', borderRadius: '18px',
+                alignSelf: align, backgroundColor: bg, color: txt,
+                fontSize: '14px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                borderBottomRightRadius: isMe ? '4px' : '18px',
+                borderBottomLeftRadius: isMe ? '18px' : '4px',
+                wordWrap: 'break-word'
+            };
+        }
     };
 
     return (
@@ -141,33 +191,54 @@ const ChatComponent = () => {
                 <div style={styles.chatWindow}>
                     <div style={styles.header}>
                         <span>{isAdmin ? "🛡️ ADMIN PANEL" : "💬 Asistent Energie"}</span>
-                        <button onClick={() => setIsOpen(false)} style={{background: 'transparent', border: 'none', color: 'white', cursor: 'pointer'}}>✖</button>
+                        <button onClick={() => setIsOpen(false)} style={{background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', fontSize: '18px'}}>✖</button>
                     </div>
+                    
                     <div style={styles.messagesArea}>
+                        {/* MESAJUL DE INTAMPINARE CLAR */}
                         {messages.length === 0 && (
-                            <div style={{textAlign: 'center', color: '#888', marginTop: '50%', padding: '0 20px'}}>
-                                {isAdmin 
-                                    ? "Aștept solicitări de la clienți..." 
-                                    : <span>Salut <b>{currentUser}</b>! Scrie <b>"admin"</b> pentru suport uman sau <b>"ai"</b> pentru bot.</span>
-                                }
+                            <div style={{textAlign: 'center', color: '#666', marginTop: '40%', padding: '0 20px', fontSize: '14px', lineHeight: '1.6'}}>
+                                {isAdmin ? (
+                                    <div>Aștept tichete de la clienți...</div>
+                                ) : (
+                                    <div>
+                                        <p>Salut <b>{currentUser}</b>!</p>
+                                        <p>Scrie una dintre opțiuni:</p>
+                                        <ul style={{listStyle: 'none', padding: 0, fontWeight: 'bold', color: '#007bff'}}>
+                                            <li>"ajutor" - Comenzi simple</li>
+                                            <li>"ai" - Asistent Inteligent</li>
+                                            <li>"admin" - Suport Uman</li>
+                                        </ul>
+                                    </div>
+                                )}
                             </div>
                         )}
                         {messages.map((msg, index) => (
-                            <div key={index} style={styles.messageBubble(msg.sender)}>
-                                <div style={{fontSize: '10px', fontWeight: 'bold', marginBottom: '2px', opacity: 0.8}}>
-                                    {msg.sender === currentUser || (isAdmin && msg.sender === 'admin') ? "Eu" : msg.sender}
-                                </div>
+                            <div key={index} style={styles.bubble(msg.sender)}>
+                                {msg.sender !== "Eu" && 
+                                    <div style={{fontSize: '10px', fontWeight: 'bold', marginBottom: '4px', opacity: 0.7}}>
+                                        {msg.sender}
+                                    </div>
+                                }
                                 {msg.content}
                             </div>
                         ))}
                         <div ref={messagesEndRef} />
                     </div>
+
                     <div style={styles.inputArea}>
-                        <input style={styles.input} value={input} onChange={(e) => setInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && sendMessage()} placeholder="Scrie mesaj..." />
+                        <input 
+                            style={styles.input} 
+                            value={input} 
+                            onChange={(e) => setInput(e.target.value)} 
+                            onKeyPress={(e) => e.key === 'Enter' && sendMessage()} 
+                            placeholder="Scrie un mesaj..." 
+                        />
                         <button style={styles.sendBtn} onClick={sendMessage}>➤</button>
                     </div>
                 </div>
             )}
+
             <button style={styles.button} onClick={() => setIsOpen(!isOpen)}>
                 {isOpen ? '⬇' : (isAdmin ? '🛡️' : '💬')}
             </button>

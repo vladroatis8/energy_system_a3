@@ -22,7 +22,7 @@ function LoginPage({ onLoginSuccess }) {
             localStorage.setItem('role', role);
             localStorage.setItem('authId', id); 
 
-            
+            localStorage.setItem("username", username);
             onLoginSuccess(); 
 
         } catch (err) {

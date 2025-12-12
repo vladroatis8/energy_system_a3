@@ -18,7 +18,7 @@ public class OverconsumptionConsumer {
     public void handleOverconsumptionNotification(OverconsumptionNotification notification) {
         System.out.println("🚨 Notificare overconsumption primită: " + notification);
         
-        // Trimite notificarea prin WebSocket către frontend
+        // Trimite notificarea prin WebSocket la frontend
         notificationService.sendNotification(notification);
     }
 }

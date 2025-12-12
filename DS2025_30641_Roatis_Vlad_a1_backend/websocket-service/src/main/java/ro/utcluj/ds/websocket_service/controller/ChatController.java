@@ -63,10 +63,13 @@ public class ChatController {
     }
 
     // Adminul răspunde
-    @MessageMapping("/admin/reply")
+   @MessageMapping("/admin/reply")
     public void adminReply(@Payload ChatMessage message) {
-        // Adminul trimite "ADMIN: salut" -> Ajunge la useri pe canalul public
-        ChatMessage response = new ChatMessage("ADMIN", message.getContent());
+        // În loc să hardcodăm "ADMIN", luăm numele adminului (ex: "vldadmin") 
+        // și îi punem prefixul "ADMIN " ca să știe clientul cu cine vorbește.
+        String senderWithTag = "ADMIN " + message.getSender();
+        
+        ChatMessage response = new ChatMessage(senderWithTag, message.getContent());
         messagingTemplate.convertAndSend("/topic/messages", response);
     }
 }

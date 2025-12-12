@@ -14,7 +14,6 @@ public class NotificationService {
     }
 
     public void sendNotification(OverconsumptionNotification notification) {
-        // Trimite notificarea către toți clienții conectați la /topic/notifications
         messagingTemplate.convertAndSend("/topic/socket/overconsumption", notification);
         
         System.out.println("✅ Notificare trimisă prin WebSocket: " + notification.getMessage());

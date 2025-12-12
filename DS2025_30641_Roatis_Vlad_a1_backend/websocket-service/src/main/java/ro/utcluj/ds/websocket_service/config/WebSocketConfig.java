@@ -12,18 +12,16 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
-        // Prefix pentru mesajele către client
         config.enableSimpleBroker("/topic");
         
-        // Prefix pentru mesajele de la client către server
         config.setApplicationDestinationPrefixes("/app");
     }
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        // Endpoint WebSocket la care se conectează frontend-ul
+        // Endpoint WebSocket la care se conecteaza frontend-ul
         registry.addEndpoint("/ws")
                 .setAllowedOriginPatterns("*")
-                .withSockJS(); // Fallback pentru browsere care nu suportă WebSocket
+                .withSockJS(); 
     }
 }

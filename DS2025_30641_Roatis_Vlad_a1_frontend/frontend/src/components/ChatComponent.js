@@ -7,71 +7,63 @@ const ChatComponent = () => {
     const [input, setInput] = useState('');
     const [connected, setConnected] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
+     //initializare stare utilizator
+    const [currentUser, setCurrentUser] = useState(() => {
+        return localStorage.getItem("username") || "Guest";
+    });
     
-    // Stare pentru User și Rol
-    const [currentUser, setCurrentUser] = useState("Guest");
-    const [isAdmin, setIsAdmin] = useState(false);
+    const [isAdmin, setIsAdmin] = useState(() => {
+        const role = localStorage.getItem("role");
+        return role === "ADMIN" || role === "ADMINISTRATOR";
+    });
 
     const stompClientRef = useRef(null);
     const messagesEndRef = useRef(null);
-
-    // --- 1. MONITORIZARE LOGIN ---
+    // monitorizare login
     useEffect(() => {
-        const checkIdentity = () => {
-            // Citim username-ul salvat la login. Dacă nu există, e Guest.
+        const interval = setInterval(() => {
             const storedName = localStorage.getItem("username") || "Guest";
             const storedRole = localStorage.getItem("role");
-
             const isUserAdmin = storedRole === "ADMIN" || storedRole === "ADMINISTRATOR";
 
             if (storedName !== currentUser || isUserAdmin !== isAdmin) {
-                console.log(`🔄 User: ${storedName}, Admin: ${isUserAdmin}`);
+                console.log(`🔄 Schimbare cont: ${storedName} (Admin: ${isUserAdmin})`);
                 setCurrentUser(storedName);
                 setIsAdmin(isUserAdmin);
                 setMessages([]); 
             }
-        };
-
-        const interval = setInterval(checkIdentity, 1000);
-        checkIdentity(); 
-
+        }, 1000);
         return () => clearInterval(interval);
     }, [currentUser, isAdmin]);
 
-    // --- 2. CONEXIUNE WEBSOCKET ---
     useEffect(() => {
         const client = new Client({
             webSocketFactory: () => new SockJS('http://localhost/ws'),
             onConnect: () => {
+                console.log("✅ WebSocket Conectat!");
                 setConnected(true);
 
-                // A. CANAL PUBLIC (Aici vin mesajele vizibile tuturor)
+                // Canal Public
                 client.subscribe('/topic/messages', (message) => {
                     const body = JSON.parse(message.body);
                     
-                    // --- FILTRARE PENTRU A EVITA DUBLURILE ---
                     
-                    // 1. Dacă sunt Admin și mesajul vine de la "ADMIN" (adică de la mine via server), îl ignor
-                    //    pentru că l-am afișat deja local când am dat Send.
-                    if (isAdmin && (body.sender === "ADMIN" || body.sender === "admin")) {
+                    
+                    if (isAdmin && body.sender === `ADMIN ${currentUser}`) {
                         return; 
                     }
 
-                    // 2. Dacă sunt Client și mesajul vine de la mine (numele meu), îl ignor
-                    //    (tot pentru că l-am afișat local).
                     if (!isAdmin && body.sender === currentUser) {
                         return;
                     }
 
-                    // Dacă trece de filtre, îl afișez
                     addMessage(body.sender, body.content);
                 });
 
-                // B. CANAL PRIVAT ADMIN (Doar Adminii văd cererile de suport)
+                // Canal Admin
                 if (isAdmin) {
                     client.subscribe('/topic/admin', (message) => {
                         const body = JSON.parse(message.body);
-                        // Aici afișăm mesajele care vin de la useri pe canalul de suport
                         addMessage(`USER-SUPPORT (${body.sender})`, body.content);
                     });
                 }
@@ -86,7 +78,6 @@ const ChatComponent = () => {
         return () => { if (client.active) client.deactivate(); };
     }, [currentUser, isAdmin]);
 
-    // Auto-scroll
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
@@ -98,8 +89,7 @@ const ChatComponent = () => {
     const sendMessage = () => {
         if (input.trim() && stompClientRef.current && connected) {
             
-            // Numele cu care trimit la server
-            const senderName = isAdmin ? "ADMIN" : currentUser;
+            const senderName = currentUser;
             
             const chatMessage = {
                 sender: senderName,
@@ -108,21 +98,18 @@ const ChatComponent = () => {
 
             const destination = isAdmin ? "/app/admin/reply" : "/app/chat";
 
-            // 1. Trimit la server
             stompClientRef.current.publish({
                 destination: destination,
                 body: JSON.stringify(chatMessage)
             });
 
-            // 2. Afișez LOCAL (ca să văd ce am scris imediat)
-            // Aici e cheia: pentru că îl adaug aici, trebuie să îl ignor când vine înapoi de la server (vezi sus)
-            addMessage("Eu", input);
+            addMessage(senderName, input);
             
             setInput('');
         }
     };
 
-    // --- STILURI ---
+    // STILURI
     const headerColor = isAdmin ? '#dc3545' : '#007bff'; 
 
     const styles = {
@@ -162,8 +149,10 @@ const ChatComponent = () => {
             padding: '10px 16px', backgroundColor: '#28a745', color: 'white', 
             border: 'none', borderRadius: '20px', cursor: 'pointer', fontWeight: 'bold'
         },
+        
         bubble: (sender) => {
-            const isMe = sender === "Eu";
+            // daca mesajul e al meu
+            const isMe = sender === currentUser;
             const isSupport = sender.startsWith("USER-SUPPORT");
             const isSystem = sender === "System Chatbot";
 
@@ -195,11 +184,10 @@ const ChatComponent = () => {
                     </div>
                     
                     <div style={styles.messagesArea}>
-                        {/* MESAJUL DE INTAMPINARE CLAR */}
                         {messages.length === 0 && (
                             <div style={{textAlign: 'center', color: '#666', marginTop: '40%', padding: '0 20px', fontSize: '14px', lineHeight: '1.6'}}>
                                 {isAdmin ? (
-                                    <div>Aștept tichete de la clienți...</div>
+                                    <div>Aștept mesaje de la clienți...</div>
                                 ) : (
                                     <div>
                                         <p>Salut <b>{currentUser}</b>!</p>
@@ -215,7 +203,8 @@ const ChatComponent = () => {
                         )}
                         {messages.map((msg, index) => (
                             <div key={index} style={styles.bubble(msg.sender)}>
-                                {msg.sender !== "Eu" && 
+                                {/*afisam numele */}
+                                {msg.sender !== currentUser && 
                                     <div style={{fontSize: '10px', fontWeight: 'bold', marginBottom: '4px', opacity: 0.7}}>
                                         {msg.sender}
                                     </div>
